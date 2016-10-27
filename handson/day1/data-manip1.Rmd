@@ -123,7 +123,7 @@ demog_final <- all_dat_no_bql %>%
   distinct(ID, FORM, .keep_all = T)
 
 demog_final %>% 
-  select_if(SEX:RACE) %>% 
+  select(SEX:RACE) %>% 
   mutate(SEX = as.factor(SEX),
           RACE= as.factor(RACE)) %>% 
   summary
