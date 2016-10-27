@@ -1,0 +1,56 @@
+---
+title: "ggplot2 handson"
+author: "YOUR_NAME_HERE"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r}
+library(PKPDdatasets)
+library(PKPDmisc)
+library(tidyverse)
+```
+
+## XY Plots
+
+1) For concentration-time plots filter only OCC 1 from dapa_IV_oral for subsequent plotting
+
+```{r}
+
+```
+
+2) Basic Concentration-Time plot (point and lines)
+
+```{r}
+
+```
+
+
+
+3) make points/lines bigger
+```{r}
+
+```
+
+4) add log transformation to y axis
+
+```{r}
+
+```
+
+### make separate plots with the following customizations
+
+5) Add color by gender
+
+6) facet by race
+
+7) color by weight
+
+
+## Boxplots and Histograms
+
+* Histogram(s) of demographics
+  * add vertical line for median value 
+* Boxplot cmax/AUC by gender
+  * add points to show the individual value, and to prevent overlap jitter by x-only
+

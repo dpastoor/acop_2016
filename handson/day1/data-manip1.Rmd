@@ -1,0 +1,87 @@
+---
+title: "data manipulation hands-on"
+author: "YOUR_NAME_HERE"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r}
+library(PKPDmisc)
+library(knitr)
+library(tidyverse)
+```
+
+## DATA IMPORT
+
+Objectives:
+
+* Import datasets and documents
+* Perform basic data manipulation upon importing the data.
+
+### Task-I
+
+Use the .csv files `demog`, `IV`, and `Oral` provided into the data object folder. 
+
+1. Read in all three csv files  and give them descriptive names (not data1, data2, data3)
+
+
+## DATA MANIPULATION
+The goals of this section:
+
+* Use data manipulation tools to prepare the dataset for analysis
+
+### Task-II
+1.  Rename "DV" column as "COBS"
+
+2. Add a Formulation column and label IV/Oral for each dataset
+
+3. Create one integrated dataset with both IV and Oral data.
+
+4. Appropriately merge the demographics dataset into the IV and Oral dataset
+
+5. Perform the following tasks:
+    a. Ensure that the following columns are numeric and not text: TIME, COBS, WT, AGE, AMT and DOSEs
+    b. Change the following:
+    c. Create a new column called BQLFLAG which takes a value of "0" if there is a numerical value in CObs and "1" if there is "BQL" in CObs.
+    d. Filter the dataset such that you remove all rows where BQLFLAG=1
+        i. WT from lb to kg 
+    e. Create a new column called "GENDER" where:
+        i. Female = 0
+        ii. Male = 1 
+    f. Create a new column called RACEN where:
+        i. Caucasian = 0
+        ii. Asian = 1
+        iii. Black = 2
+        iv. Hispanic = 3
+    g. Create a new column called "USUBJID" - unique subject ID as combination of formulation and ID (hint check out `?interaction`)
+    h. Remove the following columns
+        i. SEX
+        ii. RACE
+6. Save the above modifications as a new csv file
+
+## Descriptive Statistics
+
+Objectives
+
+* How to make summaries of the data using descriptive statistics and other data manipulation tools (dplyr, base R functions etc)
+
+### Task III
+
+```{r}
+
+```
+
+1. show a summary for all demographic columns
+
+
+2. Count the number of males/females in the dataset
+
+3. Count the number of subjects in each "Race" category
+
+4. calculate the min, mean, and max values for WT, AGE:
+    a. by Gender
+    b. by Race
+    
+5. What is the Average numbers samples(observations) per individual in this dataset. Hint: make sure you are *only* counting samples, not necessarily all rows are observations!
+
+6. Calculate the Mean, 5th, and 95th percentile concentration at each time point for each formulation and dose level. hint: you can use `?quantile` to calculate various quantiles

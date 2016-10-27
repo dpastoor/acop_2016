@@ -1,0 +1,1234 @@
+---
+title: "Creating Dynamic Documents with RMarkdown and Knitr"
+author: "By: Vijay Ivaturi, `@vijay_ivaturi`, vivaturi at rx dot umaryland dot edu"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:  
+  html_document:
+    code_folding: show
+    highlight: haddock
+    keep_md: yes
+    number_sections: yes
+    theme: readable
+    toc: yes
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+      toc_depth: 3
+csl: Bib_Citation_Files/nature.csl
+bibliography: Bib_Citation_Files/2016-06-06-R-packages.bib
+---
+
+```{r set-global-options, echo = FALSE}
+knitr::opts_chunk$set(eval = TRUE, 
+                      echo = TRUE, 
+                      cache = FALSE,
+                      include = TRUE,
+                      collapse = FALSE,
+                      dependson = NULL,
+                      engine = "R", # Chunks will always have R code, unless noted
+                      error = TRUE,
+                      fig.path="Figures/",  # Set the figure options
+                      fig.align = "center", 
+                      fig.width = 7,
+                      fig.height = 7)
+```
+
+
+```{r silent-packages, echo = FALSE, eval = TRUE, message=FALSE, include = FALSE}
+library(knitr)
+library(dplyr)
+library(ggplot2)
+library(DT)
+library(plotly)
+```
+
+
+******************************************************************************************
+
+# Welcome!
+
+This in an introduction to Rmarkdown - a R based version of a powerful yet simple to use text input system called **markdown**.
+
+## Installation Instructions  
+
+**Before working through the workshop materials, please do the following in preparation:**
+
+1. Open up **RStudio**.  
+2. Install and download the **devtools** R package by running the following in the R console. 
+
+```{r devtools, eval = FALSE}
+install.packages("devtools") # To include the session information
+library("devtools") # To include the session information  
+```
+
+3. Check that you have the correct versions of **R** and **RStudio** by running `devtools::session_info()` in the R console.  
+Here, `devtools::` tells **R** to use the `session_info()` function within the **devtools** package rather than the `sessionInfo()` function within the **utils** package.  Running `devtools::session_info()` allows us to see the version of **R** and **RStudio**. 
+
+Do you have the following versions of **R** and **RStudio**?  
+
+- **R:** `Version 3.2.2 (2016-06-06)`  
+- **RStudio:** `0.99.1172`  
+
+  - If you **do** then you are good to go!  
+  - If you **do not** have the correct versions of **R** and **RStudio**, please follow the Setup document provided in the workshop folder.  
+
+4. Install other R packages necessary for the workshop.
+
+```{r install-directions, eval = FALSE}
+## Install the correct packages
+install.packages("rmarkdown") # Make cool dynamic documents
+install.packages("knitr") # Run R Code Chunks
+install.packages("ggplot2") # For plotting
+install.packages("DT") # Interactive HTML tables
+install.packages("plotly") # Interactive HTML tables
+devtools::install_github("dpastoor/PKPDdatasets") # A library of PKPD Datasets
+devtools::install_github("dpastoor/PKPDmisc") # A library of miscellaneous functions for pharmacometrics analysis
+```
+
+```{r library-packages, eval = TRUE}
+## Add these packages to the current session to make sure they load correctly
+library("rmarkdown") # Make cool dynamic documents
+library("knitr") # Run R Code Chunks
+library("ggplot2") # For plotting
+library("DT") # Interactive HTML tables
+library("PKPDdatasets")
+library("PKPDmisc")
+library("plotly")
+```
+
+5. If your packages loaded without any errors, then you are ready for the workshop!  
+
+If there were issues with the above packages please place a pink sticky to get help !
+
+
+******************************************************************************************
+
+# Must Have Resources
+
+1. The RMarkdown website hosted by [RStudio](http://rmarkdown.rstudio.com/index.html).
+2. Dr. Yuhui Xie's book: [Dynamic Documents with R and Knitr](http://www.amazon.com/Dynamic-Documents-knitr-Chapman-Hall/dp/1482203537) 2^nd^ Edition [@Xie2015] and his [Knitr](http://yihui.name/knitr/) website.  
+3. [Cheatsheets](https://www.rstudio.com/resources/cheatsheets/) released by RStudio.
+
+
+******************************************************************************************
+
+# Dynamic Documents  
+
+[Literate programming](https://en.wikipedia.org/wiki/Literate_programming) is the basic idea behind dynamic documents and was proposed by Donald Knuth in 1984.  Originally, it was for mixing the source code and documentation of software development together.  Today, we will create dynamic documents in which program or analysis code is run to produce output (e.g. tables, plots, models, etc) and then are explained through narrative writing.
+
+The 3 steps of **Literate Programming**:  
+
+1. **Parse** the source document and separate code from narratives.  
+2. **Execute** source code and return results.  
+3. **Mix** results from the source code with the original narratives.  
+
+
+So that leaves 2 steps for us which includes writing:  
+
+1. Analysis code  
+2. A narrative to explain the results from the analysis code.  
+
+Traditionally, people used comments to include narrative in their code file (for **R** that would be a `.R` file). For example, the file may include the following:
+
+```{r dapa-example-code, eval = FALSE, echo = TRUE}
+# Title:  Initial Data Checkout for dapa dataset 
+# By:  Vijay Ivaturi
+# Date:  June 6th, 2016
+
+# This document will contain the initial data checkout and exploratory data analysis of the dapa dataset.  
+# It will allow qualification of data as well as to understand the pharmacokinetic profiles, information that can be used to set up the modeling framework.
+
+# What does the data look like?
+DT::datatable(dapa_IV_oral) # Interactive table 
+
+# What are the total number of subjects in the dataset and by arm
+dapa_IV_oral %>% distinct(ID) %>% tally  # Isolate the first row per ID and count the number of rows
+dapa_IV_oral %>% distinct(ID,OCC)  %>%  group_by(ID) %>% group_size# No occassions per subject 
+
+
+# Plot the relationship between concentration and time for the IV formulation  
+plot <- ggplot(dapa_IV_oral %>% filter(FORMULATION=="IV"), aes(x = TIME, y = COBS, color=factor(ID))) + # 
+  geom_line(size=1, alpha=0.2) + theme_bw() + scale_y_log10()+
+  xlab("Time (hours)") + ylab("Concentration (ug/L)") # Add axis labels
+ggplotly(plot) # Make the plot interactive  
+
+# It appears that the IV profiles follow a bi-phasic distribution and hence we may use a 2-compartment model
+# The end
+```
+
+Then the user would have to read the comments and run the code themselves.  
+
+However, literate programming allows us to run the code and describe the code all within one document that we could share.  So for example we could do the following:  
+
+***
+
+**Title:**  Initial Data Checkout for dapa dataset   
+*By:*  Vijay Ivaturi  
+*Date:*  June 6th, 2016  
+
+This document will contain the initial data checkout and exploratory data analysis of the dapa dataset.  It will allow qualification of data as well as to understand the pharmacokinetic profiles, information that can be used to set up the modeling framework.
+
+
+*What does the data look like?*
+
+```{r dapa-show}
+
+DT::datatable(dapa_IV_oral) # Interactive table 
+```
+
+*What are the total number of subjects in the dataset and by arm*
+```{r}
+dapa_IV_oral %>% distinct(ID) %>% tally  # Isolate the first row per ID and count the number of rows
+```
+
+*What are the total number of occassions per subejct*
+```{r}
+dapa_IV_oral %>% distinct(ID,OCC)  %>%  group_by(ID) %>% group_size# No occassions per subject 
+```
+
+If you would rather just make a statement about the number of subjects, you can use inline code like below (more on that later) -
+
+The total number of subjects in the `dapa` dataset are `r dapa_IV_oral %>% distinct(ID) %>% tally %>% unlist`
+
+*Plot the relationship between concentration and time for the IV formulation*
+```{r}
+plot <- ggplot(dapa_IV_oral %>% filter(FORMULATION=="IV"), aes(x = TIME, y = COBS, color=factor(ID))) + # 
+  geom_line(size=1, alpha=0.2) + theme_bw() + scale_y_log10()+
+  xlab("Time (hours)") + ylab("Concentration (ug/L)") # Add axis labels
+plot
+ggplotly(plot) # Make the plot interactive  
+```
+
+It appears that the IV profiles follow a bi-phasic distribution and hence we may use a 2-compartment model
+
+**The end**
+
+
+***
+
+If we use literate programming, we could also:  
+
+1. **Tangle**:  Extract the source code out of the document.  
+2. **Weave**:  Execute the code to get the compiled results.  
+
+
+******************************************************************************************
+
+## Reproducible Research  
+
+Reproducible research is one possible product of dynamic documents, however, it is not guaranteed!  Good practices for reproducible research include:  
+
+1. Encapsulate the full project into one directory that is supported with version control.  
+2. Release your code and data.  
+3. Document everything and use code as documentation!  
+4. Make figures, tables, and statistics the results of scripts and `inline code`.  
+5. Write code that uses relative paths.  
+6. Always Set your seed.  
+7. Always include session information in the code file.  For example, you can use `devtools::session_info()`.
+
+To read more about reproducibility and data management check out Vince Buffalo's Book[@Buffalo2015].
+
+
+******************************************************************************************
+
+# Markdown
+
+To fully understand RMarkdown, we first need to cover [Markdown](https://daringfireball.net/projects/markdown/), which is a system for writing simple, readable text that is easily converted to HTML.  Markdown essentially is two things:  
+
+1. A plain text formatting syntax  
+2. A software tool written in Perl.  
+    - Converts the plain text formatting into HTML.  
+    
+>**Main goal of Markdown:**  
+> Make the syntax of the raw (pre-HTML) document as readable possible. 
+
+Would you rather read this code in HTML?  
+```html
+<body>
+  <section>
+    <h1>Project Workflow</h1>
+    <ul>
+      <li>Data checkout</li>
+      <li>Data munging</li>
+      <li>Exploratory data analysis</li>
+      <li>Modeling</li>
+      <li>Reports</li>
+    </ul>
+  </section>
+</body>
+```
+
+Or this code in Markdown?  
+```markdown
+# Project Workflow
+
+* Data checkout
+* Data munging
+* Exploratory data analysis  
+* Modeling
+* Reports
+```
+If you are human, the Markdown code is definitely easier to read!
+
+We will talk more about the syntax of Markdown after we introduce RMarkdown but let us take a moment to soak in how much easier our lives are/will be because Markdown exists! Thank you [John Gruber](https://en.wikipedia.org/wiki/John_Gruber) and [Aaron Swartz](https://en.wikipedia.org/wiki/Aaron_Swartz) (RIP) for creating Markdown in 2004! 
+
+******************************************************************************************
+
+# RMarkdown
+[RMarkdown](http://rmarkdown.rstudio.com/) is a variant of Markdown that makes it easy to create dynamic documents, presentations and reports within RStudio.  It has embedded R code chunks to be used with **knitr** to make it easy to create reproducible (web-based) reports in the sense that they can be automatically regenerated when the underlying code is modified.    
+
+- RMarkdown lets you combine **Markdown** with images, links, tables, LaTeX, and actual code.
+- RStudio makes creating documents from RMarkdown easy  
+- RStudio (like R) is free and runs on any operating system.
+
+
+**RMarkdown renders many different types of files including:**  
+
+- [HTML](http://rmarkdown.rstudio.com/html_document_format.html)    
+- [PDF](http://rmarkdown.rstudio.com/pdf_document_format.html")  
+- Markdown  
+- [Microsoft Word](http://rmarkdown.rstudio.com/word_document_format.html)
+- Presentations:  
+    - Fancy HTML5 presentations:  
+        - [ioslides](http://rmarkdown.rstudio.com/ioslides_presentation_format.html)
+        - [Slidy](http://rmarkdown.rstudio.com/slidy_presentation_format.html)
+        - [Slidify](http://slidify.org/index.html)
+    - PDF Presentations:  
+        - [Beamer](http://rmarkdown.rstudio.com/beamer_presentation_format.html)
+    - Handouts:  
+        - [Tufte Handouts](http://rmarkdown.rstudio.com/tufte_handout_format.html)
+- [HTML R Package Vignettes](http://rmarkdown.rstudio.com/package_vignette_format.html)  
+- [Even Entire Websites](http://rmarkdown.rstudio.com/rmarkdown_websites.html)!
+
+![](Images/Rmd_output.png)
+
+While there are a lot of different types of rendered documents in RMarkdown, today we will focus primarily on HTML output files, as we have found these files to be the most useful and flexible for our pharmacometric workflows during development phase.
+
+## Why R Markdown?
+A convenient tool for reproducible and dynamic reports!       
+
+- While it was created for R, it now accepts many programming languages.  For simplicity, we will only work with R today.  
+- Execute code in a few ways:  
+    1. **Inline Code:**  Brief code that takes place during the written part of the document. 
+    2. **Code Chunks:**  Parts of the document that includes several lines of program or analysis code.  It may render a plot or table, calculate summary statistics, load packages, etc.  
+- It is easy to:  
+    - Embed images.  
+    - Learn Markdown syntax.  
+    - Include LaTeX equations.  
+    - Include interactive tables.
+    - Use version control with **Git**.  
+        - Even easier to share and collaborate on analyses, projects and publications!
+    - Add external links - Rmarkdown even understands some html code!  
+    - Make beautifully formatted documents.
+- Do not need to worry about page breaks or figure placement.  
+- Consolidate your code and write up into a single file:  
+    + Slideshows, PDFs, html documents, word files  
+
+## Simple Workflow  
+
+Briefly, to make a report:  
+
+1. **Open** a `.Rmd` file.  
+    - Create a YAML header (more on this in a minute!)
+2. **Write** the content with RMarkdown syntax.  
+3. **Embed** the R code in code chunks or inline code.  
+4. **Render** the document output.  
+
+![Workflow for creating a report](Images/rmd_workflow_cheatsheet.png)
+
+
+
+**Overview of the steps RMarkdown takes to get to the rendered document:**  
+
+1. Create `.Rmd` report that includes R code chunks and and markdown narratives (as indicated in steps above.).  
+2. Give the `.Rmd` file to `knitr` to execute the R code chunks and create a new `.md` file.  
+    - [Knitr](http://yihui.name/knitr/) is a package within R that allows the integration of R code into rendered RMarkdown documents such as HTML, latex, pdf, word, among other document types.  
+3. Give the `.md` file to **pandoc**, which will create the final rendered document (e.g. html, Microsoft word, pdf, etc.).  
+    - [Pandoc](http://pandoc.org/) is a universal document converter and enables the conversion of one document type (in this case: `.Rmd`) to another (in this case: `HTML`)
+
+![How an Rmd document is rendered](Images/Rmd_workflow.png)
+
+While this may seem complicated, we can hit the "Knit" button at the top of the page like this:  
+![](Images/knit_button.png)
+
+or we can run the following code:  
+```{r render-example, eval = FALSE}
+rmarkdown::render("RMarkdown_Lesson.Rmd", "html_document")
+```
+
+## Creating a `.Rmd` File  
+
+It's go time!  Let's start working with RMarkdown!
+
+1.  In the menu bar, click **File -> New File -> RMarkdown**  
+    - Or simply click on the green plus sign in the top left corner of RStudio. 
+    
+![](Images/create_rmd.png)
+
+2. The window below will pop up.  
+- Inside of this window, choose the type of output by selecting the radio buttons.  **Note:** this output can be easily changed later!  
+
+![](Images/new_rmd_yaml.png)
+
+3. Click **OK**  
+  
+
+
+## YAML Headers
+
+YAML stands for "YAML Ain't Markup Language" and is basically a nested list structure that includes the metadata of the document.  It is enclosed between two lines of three dashes `---` and as we saw above is automatically written by RStudio.  A simple example:  
+
+```
+---
+title:  "Data checkout"  
+Author:  "Vijay Ivaturi"  
+date: "June 06, 2016"  
+output:  html_document
+---
+```
+
+The above example will create an HTML document.  However, the following options are also available.  
+
+- `html_document`  
+- `pdf_document`  
+- `word_document`  
+- `beamer_presentation` (pdf slideshow)  
+- `ioslides_presentation` (HTML slideshow)  
+- and more...  
+
+Today, we will be focused on HTML files.  However, please be welcome to play around with creating word and pdf documents.  Presentation slides take on a slightly different syntax (e.g. to specify when one slide ends and the next one starts) and so there is a bit of markdown syntax specific to presentations that are beyond the focus of this workshop.  
+
+We will build on the details of YAML headers throughout the workshop.  
+
+
+## Markdown Basics  
+
+Check out the [RMarkdown Reference Guide](http://www.rstudio.com/wp-content/uploads/2015/03/rmarkdown-reference.pdf)
+
+To list a few from the [RMarkdown Cheatsheet](http://www.rstudio.com/wp-content/uploads/2016/03/rmarkdown-cheatsheet-2.0.pdf) :  
+
+![Markdown Basics from RStudio's RMarkdown Cheatsheet](Images/markdown_basics.png)
+
+
+**Helpful Hints:**  
+
+- End a line with two spaces to start a new paragraph.  
+- Words formatted like code should be surrounded by back ticks on both sides: `  
+- To make something superscript surround it with `^` on each side.  Super^script^ was created by typing `Super^script^`.  
+- Equations can be inline code using `$` and centered as a blocked equation within the document with `$$`.  For example $DOSE = CL \times AUC$ is inline while the following is a blocked equation is: $$DOSE = CL \times AUC$$  
+    - **Note:** To make it superscript with `$` and `$$` a `^` is needed before each alphanumeric that is superscript.  
+    - Other fun math stuff:  
+        - Square root:  `$\sqrt{\omega}$` will create $\sqrt{\omega}$  
+        - Fractions:  `$\frac{DOSE}{CL}$` = $\frac{DOSE}{CL}$  
+            - - Fractional Equations:  `$f(x)=\frac{P(x)}{Q(x)}$` = $f(x)=\frac{P(x)}{Q(x)}$  
+        - Binomial Coefficients:  `$\binom{k}{n}$` = $\binom{k}{n}$  
+        - Integrals:  `$$\int_{0}^{\inf} C dt$$` = $$\int_{0}^{\inf} C dt$$
+    - [ShareLaTeX](https://www.sharelatex.com/learn/Main_Page) is an awesome source for LaTeX code.
+
+**Some more mathy stuff:**
+		
+| Description |         Code        |      Examples          |
+|------------:|---------------------|:----------------------:|
+|   Greek letters  |  `$\alpha$` `$\beta$` `$\gamma$` `$\rho$` `$\sigma$` `$\delta$` `$\epsilon$` `$mu$`  |    $\alpha$ $\beta$ $\gamma$ $\rho$ $\sigma$ $\delta$ $\epsilon$ $\mu$   |
+|  Binary operators  |  `$\times$` `$\otimes$` `$\oplus$` `$\cup$` `$\cap$`|   $\times$ $\otimes$ $\oplus$ $\cup$ $\cap$	$\times$|
+|    Relation operators  |    `$< >$` `$\subset$` `$\supset$` `$\subseteq$` `$\supseteq$` |     $< >$ $\subset$ $\supset$ $\subseteq$ $\supseteq$ |
+|    Others  |    `$\int$` `$\oint$` `$\sum$` `$\prod$` |     $\int$ $\oint$ $\sum$ $\prod$ |
+
+
+******************************************************************************************
+
+
+> **Challenge:** 
+> Try to mimic the output of the following:  
+
+1.  Today, I am **bold** and am learning *RMarkdown*.
+
+2.  *Clearance* and *Volume* are _independent_ parameters.  
+
+3. YAS!!!^!!!^  
+
+4. R^2^ values are **informative**!  
+
+5. $R^{2}$ describe the *variance* explained in the model.  
+
+6.  ~~I do not know RMarkdown~~  `Today I learned RMarkdown`   
+
+7.  [RStudio link](www.rstudio.com)  
+
+8.  Output from the following:  
+```
+# RMarkdown   
+## R   
+### Knitr   
+#### Pandoc  
+##### HTML  
+```
+
+9.  $\sqrt{b^2 - 4ac}$
+
+10. $$\sqrt{b^2 - 4ac}$$  
+
+11.  $X_{i,j}$  
+
+> 12.  Today is the day I will make a dynamic document!  
+
+13.  The following list:  
+
+**Manuscript Outline** 
+
+1. Abstract
+2. Introduction  
+3. Methods
+  - Clinical Study
+  - Data
+  - Modeling
+    - make sure to include all relevant **equations**
+4. Results  
+5. Conclusions 
+
+
+******************************************************************************************
+
+
+**Fun Fact!**  The table of contents of this website was created from headers with 1-3 pound symbols! (More on this later)
+
+
+
+## Embed Code
+
+There are 2 ways to embed code within an RMarkdown document.  
+
+
+1. **Inline Code:**  Brief code that takes place during the written part of the document.  
+
+2. **Code Chunks:**  Parts of the document that includes several lines of program or analysis code.  It may render a plot or table, calculate summary statistics, load packages, etc.  
+    
+    
+### Inline R Code  
+
+Inline code is created by using a back tick (`) and the letter r followed by another back tick.  
+
+- For example:  2^11^ is `r 2^11`.  
+
+Imagine that you're reporting a p-value and you do not want to go back and add it every time the statistical test is re-run.  Rather, the p-value is `0.0045`.  
+
+This is really helpful when writing up the results section of a paper.  For example, you may have ran a bunch of statistics for your scientific questions and this would be a way to have **R** save that value in a variable name.  
+
+For example:  What is the average body weight in the `dapa_IV_oral` dataset ?  
+
+To extract the average body weight can perform the calculation `dapa_IV_oral %>% distinct(ID) %>% summarise(avg_wt=round(mean(WEIGHT),2)) %>% unlist` within inline code. 
+
+The average body weight is `r dapa_IV_oral %>% distinct(ID) %>% summarise(avg_wt=round(mean(WEIGHT),2)) %>% unlist`.
+
+
+### R Code Chunks  
+
+R code chunks can be used to render R output into documents or to display code for illustration.  
+
+**The Anatomy of a code chunk:**  
+
+To insert an R code chunk, you can type it manually by typing ```` ```{r} ```` followed by  ```` ``` ```` on the next line.  You can also press the `Insert a new code chunk` button or use the shortcut key. This will produce the following code chunk:
+
+![Inserting a code chunk](Images/insert_code_chunk.png)  
+
+    ```{r}
+    n <- 10
+    seq(n)
+    ```
+
+
+Name the code chunk something meaningful as to what it is doing.  Below I have named the code chunk `10-random-numbers`:
+
+    ```{r 10-random-numbers}
+    n <- 10
+    seq(n)
+    ```
+    
+    
+The code chunk input and output is then displayed as follows:
+
+```{r 10-random-numbers}
+n = 10
+seq(n)
+```
+
+
+**************************************************************************************************
+
+
+# Knitr  
+
+**Knitr** is an R-Package that works with  
+
+1. **Identifies code** including chunks and inline
+2. **Evaluates** all the code and returns the results 
+3. **Renders** a formatted results and combines with original file.   
+
+**Knitr** runs code as if it were being run in the R console.  
+
+
+
+Mainly **Knitr** works with code chunks.
+
+A code chunk looks like:
+
+    ```{r simulate_data}  
+    x <- rnorm(100)  
+    y <- 2*x + rnorm(100)
+    ```
+  
+
+
+**Best practices regarding code chunks:**  
+
+1. Always name/label your code chunks!  
+2. Instead of specifying the chunk options in every chunk, set the global chunk options at the beginning of the document.  More on this in a minute!  
+
+
+## Chunk Labels 
+
+Chunk labels must be **unique IDs** in a document and are good for:  
+
+- Generating external files such as images and cached documents.  
+- Chunk labels often are output when errors arise (more often for line of code).     
+- **Navigating throughout long `.Rmd` documents.**  
+
+![A method of navigating through `.Rmd` files](Images/label_navigation.png)
+
+
+
+When naming the code chunk:  Use `-` or `_` in between words for code chunks labels instead of spaces.  This will help you and other users of your document to navigate through.  
+
+Chunk labels must be unique throughout the document - otherwise there will be an error!    
+  
+  
+
+## Chunk Options  
+
+Pressing tab when inside the braces will bring up code chunk options.
+
+
+![Some Knitr Chunk Options](Images/chunk_options.png)
+
+
+- `results = "asis"` stands for "as is" and will output a non-formatted version. 
+- `collapse` is another chunk option which can be helpful.  If a code chunk has many short R expressions with some output, you can collapse the output into a chunk.     
+
+There are too many chunk options to cover here.  After the workshop take a look around at the options.
+
+Great website for exploring [Knitr Chunk Options](http://yihui.name/knitr/options/#chunk_options).  
+
+
+
+> **Challenge**  
+> Run the code chunk below and play with the following knitr code chunk options:  
+
+
+>- `eval = TRUE/FALSE`  
+>- `echo = TRUE/FALSE`  
+>- `collapse = TRUE/FALSE`  
+>- `results = "asis","markup`, and `"hide` 
+
+> In markdown, record your results.  
+> **Note:**  Be sure to name your chunks!
+
+```{r challenge-options, eval = FALSE, echo = TRUE}
+1+1
+2*5
+seq(1, 21, by = 3)
+head(dapa_IV_oral)
+```
+
+**Some examples from the chunk above**
+
+Results from `results="markup", collapse = TRUE}`:
+
+```{r options-intro-markup, results="markup", collapse = TRUE}  
+1+1
+2*5
+seq(1, 21, by = 3)
+head(dapa_IV_oral)
+```
+
+
+Results from `results="asis", collapse = TRUE}`:
+```{r options-intro-asis, results="asis", collapse = TRUE}  
+1+1
+2*5
+seq(1, 21, by = 3)
+head(dapa_IV_oral)
+```
+
+## Global Options 
+
+You may wish to have the same chunk settings throughout your document and so it might be nice to type options once instead of always re-typing it for each chunk.  To do so, you can set global chunk options at the top of the document.  
+
+```
+knitr::opts_chunk$set(echo = FALSE, 
+                      eval = TRUE, 
+                      message = FALSE,
+                      warning = FALSE, 
+                      fig.path = "Figures/",
+                      fig.width = 12, 
+                      fig.height = 8)
+```
+
+For example, if you're working with a collaborator who does not want to see the code - you could set `eval = TRUE` and `echo = FALSE` so the code is evaluated but not shown.  In addition, you may want to use `message = FALSE` and `warning = FALSE` so your collaborator does not see any messages or warnings from R.  
+
+If you would like to save and store figures within a sub directory within the project, `fig.path = "Figures/"`.  Here, the `"Figures/"` denotes a folder named *Figures* within the current directory where the figures produced within the document will be stored.  **Note:** by default figures are not saved.  
+
+Global chunk options will be set for the rest of the document.  If you would like to have a particular chunk be different from the global options, specify at the beginning of that particular chunk.
+
+
+
+## Figures  
+
+**Knitr** makes producing figures really easy.  If analysis code within a chunk is supposed to produce a figure, it will just print out into the document.  
+
+Some knitr chunk options that relate to figures:  
+
+- `fig.width` and `fig.height`  
+    - *Default:* `fig.width = 7`, `fig.height = 7`  
+- `fig.align`:  How to align the figure  
+    - *Options include:* `"left"`, `"right"`, and `"center"`  
+- `fig.path`: A file path to the directory to where knitr should store the graphic output created by the chunk.  
+    - *Default:* `'figure/'`  
+- There's even a `fig.retina`(only for HTML output) for higher figure resolution with retina displays.  
+
+```{r load-multiplot, eval = TRUE, echo = FALSE}
+# Multiple plot function
+#
+# ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+# - cols:   Number of columns in layout
+# - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+#
+# If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+# then plot 1 will go in the upper left, 2 will go in the upper right, and
+# 3 will go all the way across the bottom.
+#
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+
+  numPlots = length(plots)
+
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                    ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+
+ if (numPlots==1) {
+    print(plots[[1]])
+
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+```
+
+
+Making a single figure:  
+
+With `fig.align = "center"`
+
+```{r single-fig-center, message = FALSE, fig.align = "center", fig.width = 4, fig.height = 4}
+ggplot(dapa_IV_oral %>% distinct(ID), aes(x = WEIGHT)) + xlab("Body Weight (kgs") +
+    geom_histogram(bins = 20, fill = "cornflowerblue", color = "black") +
+    geom_vline(xintercept=mean(dapa_IV_oral$WEIGHT), col="red") 
+```
+
+With `fig.align = "right"`
+
+```{r single-fig-right, message = FALSE, fig.align = "right", fig.width = 4, fig.height = 4}
+ggplot(dapa_IV_oral %>% distinct(ID), aes(x = WEIGHT)) + xlab("Body Weight (kgs") +
+    geom_histogram(bins = 20, fill = "cornflowerblue", color = "black") +
+    geom_vline(xintercept=mean(dapa_IV_oral$WEIGHT), col="red") 
+```
+
+
+With `fig.align = "left"`
+
+```{r single-fig-left, message = FALSE, fig.align = "left", fig.width = 4, fig.height = 4}
+ggplot(dapa_IV_oral %>% distinct(ID), aes(x = COBS)) + xlab("Body Weight (kgs") +
+    geom_histogram(bins = 20, fill = "cornflowerblue", color = "black") +
+    geom_vline(xintercept=mean(dapa_IV_oral$WEIGHT), col="red") 
+```
+
+With `fig.width = 2, fig.height = 2`
+
+```{r single-fig-size2, message = FALSE, fig.align = "center", fig.width = 2, fig.height = 2}
+ggplot(dapa_IV_oral %>% distinct(ID), aes(x = WEIGHT)) + xlab("Body Weight (kgs") +
+    geom_histogram(bins = 20, fill = "cornflowerblue", color = "black") +
+    geom_vline(xintercept=mean(dapa_IV_oral$WEIGHT), col="red") 
+```
+
+With `fig.width = 10, fig.height = 10`
+
+```{r single-fig-size10, message = FALSE, fig.align = "center", fig.width = 10, fig.height = 10}
+ggplot(dapa_IV_oral %>% distinct(ID), aes(x = WEIGHT)) + xlab("Body Weight (kgs") +
+    geom_histogram(bins = 20, fill = "cornflowerblue", color = "black") +
+    geom_vline(xintercept=mean(dapa_IV_oral$WEIGHT), col="red") 
+```
+
+
+```{r many-figs, message = FALSE}
+myplots <- list()  # new empty list
+for(i in 1:ncol(dapa_IV_oral)){
+  col <- names(dapa_IV_oral)[i]
+  ggp <- ggplot(dapa_IV_oral, aes_string(x = col)) +
+    geom_histogram(bins = 20, fill = "cornflowerblue", color = "black") +
+    geom_vline(xintercept = mean(dapa_IV_oral[[col]]), col = "red") 
+  myplots[[i]] <- ggp  # add each plot into plot list
+}
+multiplot(plotlist = myplots, cols = 4) # must load in multiplot function from the Rcookbook see http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/
+```
+
+
+## Tables
+
+Hand writing tables in Markdown can get tedious.  We will not go over this here, however, if you'd like to learn more about Markdown tables check out the [documentation on tables](http://rmarkdown.rstudio.com/authoring_pandoc_markdown.html#tables) at the RMarkdown v2 website.
+
+There's a few types of tables that are useful.  Here, we will use our previous example of a looking at the `dapa_IV_oral` data  
+
+In his [Knitr in a Knutshell](http://kbroman.org/knitr_knutshell/pages/figs_tables.html), Dr. Karl Broman introduces:  `kable`, `pander`, and `xtable` and I have especially enjoyed using the first two:  
+
+- `kable`: Within the **knitr** package - not many options but looks nice with ease. 
+- `pander`: Within the **pander** package - has many more options and customization.  Useful for bold-ing certain values (e.g. values below a threshold).  
+
+`kable` and `pander` tables are nice as they are useful for making non-interactive tables:
+
+
+```{r table-examples, eval = TRUE, echo = TRUE, message = FALSE}
+kable(head(dapa_IV_oral, n = 4)) # kable table with 4 rows
+
+# Pander table
+# install.packages("pander") # install pander first
+library(pander)
+pander(head(dapa_IV_oral, n = 4))
+```
+
+
+## HTML Widgets  
+
+With the release of the new RMarkdown v2 it is now easier than ever to include [HTML Widgets](http://www.htmlwidgets.org/showcase_datatables.html).  Follow the link to explore widgets you're interested in!  
+
+The **DT** package which makes the tables interactive in the HTML output is a useful option.  In addition, [Plotly for R](https://plot.ly/r/) produces really beautiful interactive graphics based on **Plotly**.  
+
+Cool, huh? 
+
+```{r DT-example}
+# DT table = interactive
+# install.packages("DT") # install DT first
+#library(DT)
+datatable(head(dapa_IV_oral, n = nrow(dapa_IV_oral)), options = list(pageLength = 5)) 
+
+# plotly
+# install.packages("plotly")
+library(plotly)
+
+plot_ly(dapa_IV_oral, x = WEIGHT, y = AGE, 
+        text = paste("Weight: ", WEIGHT),
+        mode = "markers", color = WEIGHT, size = WEIGHT)
+```
+
+
+## Spell Check  
+
+Spelling may not be our strong suit and as a result, we may need to check the spelling in our document.  There are two ways to check the spelling:  
+
+1. Click on the "ABC check mark" ![](Images/spell_check.png) to the left of the magnifying glass button in RStudio.    
+2. Use the `aspell()` function from the **utils** package.  However, it would be desirable to skip code chunks.  The `aspell()` function can take a filter function to skip certain lines in the files and can be used with the function `knit_filter()` which was designed to skip over code chunks in a file.  
+
+
+## Knitr Themes
+The knitr syntax theme can be adjusted or completely customized.  If you do not prefer the default themes, use the object `knit_theme` to change it.  There are **80 themes** contained within `knitr` and we can view the names of them by `knit_theme$get()`.
+
+What are the first 30 `knitr` themes?
+
+```{r knitr-themes}
+head(knit_theme$get(), 30)
+```
+
+We can use `knit_theme$set()` to set the theme.  For example, to set the theme to *fruit* we could run the following code:
+
+```{r knitr-fruit-theme}
+knit_theme$set("fruit")
+```
+
+Here's the link to find your favorite theme of all the [80 knitr highlight themes](http://animation.r-forge.r-project.org/knitr/).
+
+
+## Other Programming Languages  
+
+While knitr must be run within the R environment, it also supports many other programming languages including:  
+
+- Python  
+- Ruby  
+- Haskell  
+- awk/gawk  
+- sed  
+- shell scripts  
+- Perl  
+- SAS  
+- TikZ  
+- Graphviz  
+- C++  
+- And others...  
+
+However, we have to install the corresponding software package in advance to use an engine.    
+
+Enter the  `engine` function in Knitr.  This function allows the user to specify the language for a chunk.  
+
+- `engine = "bash"` will load in bash and allow the user to write shell scripts within that code chunk.  
+
+
+**************************************************************************************************
+
+
+
+# Appearance  
+
+There are many options that we can control within our `.Rmd` document.  This section helps to introduce and explore some of these customization options for HTML documents.  
+
+## Code Folding  
+
+As you may have noticed, each one of the code chunks in this document has an interactive ![](Images/hide.png) button.  This is controlled in the YAML header and is new as of RMarkdown v2.
+
+
+When the knitr code chunk option `echo = TRUE` is specified (default = TRUE) the R code within the chunk will be included in the output document.  However, there may be times in which a user would like to exclude code entirely (`echo = FALSE`)
+
+-`code_folding:`  
+    - `code_folding: hide`:  Can include R code but have it hidden by default.  
+    - `code_folding: show`:  Shows R code and then the reader can click the ![](Images/hide.png) button to hide that chunk if they wish.  
+    
+
+```
+output: html_document
+    code_folding: show
+```
+
+## Table of Contents  
+
+A table of contents can be added to the rendered document by using the `toc` option in the YAML header.
+
+Options Include:  
+
+- `toc`:  Whether to include to the table of contents:  
+    - `toc: true`: Includes a table of contents  
+    - **Default:**`toc: false`:  Does not include a table of contents  
+- `toc_depth:`:  How many levels within the table of contents should be included in the table of contents?  
+    - **Default:** `doc_depth: 3` will include headers with `###`.  
+- `number_sections:` Add section numbers to the headers.  For example, this document has `number_sections: true`  
+    - **Default:** `number_sections: false`  
+    - Note: With each `#` there will be a decimal point added to all headers.  
+- `toc_float:`  
+    - 2 other optional parameters within `toc_float:`  
+        - `collapsed:` Controls if the table of contents appears with only the top level.  It will expand with the cursor over it.  
+            - **Default:** `collapsed: TRUE`
+        - `smooth_scroll:` Controls whether the page scrolls are animated when the items within the table of contents are navigated to via clicking on them.  
+            - **Default:** `smooth_scroll: true`      
+
+
+For example:  
+
+```
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+---
+```
+
+> **Challenge:**
+> Make the YAML header for an HTML document that includes:  
+
+> - Table of contents
+> - Float the table of contents  
+> - Section headers with two hashtags (`##`)  
+> - Numbered sections  
+> - No smooth scrolling
+
+## Themes
+
+RMarkdown has several options that control the appearance of HTML documents.  Some arguments to choose from are:  
+
+- **theme**  
+- **highlight**  
+- **smart**  
+
+
+The HTML output themes are drawn from the [Bootswatch](http://bootswatch.com/) library.  Valid **HTML themes** include the following:    
+
+- `cerulean`, `cosmo`,`flatly`, `journal`, `readable`,`spacelab`, and `united`.  
+    - For example, the theme of this page is `readable`.
+- Pass null for no theme (in this case you can use the css parameter to add your own styles).
+
+**Highlight** specifies the syntax highlighting style. Supported styles include the following:  
+
+- `default`, `espresso`, `haddock`, `kate`, `monochrome`, `pygments`, `tango`, `textmate`, and `zenburn`.   
+- Pass null to prevent syntax highlighting.
+
+**Smart** indicates whether to produce typographically correct output, converting straight quotes to curly quotes, --- to em-dashes, -- to en-dashes, and ... to ellipses. **Smart** is enabled by default.
+
+For example:
+
+```
+---
+output:
+  html_document:
+    theme: slate
+    highlight: tango
+---
+```
+
+If you felt inclined, you could also produce and use your own theme.  If you did so, the output section of your YAML header would like like:  
+```
+output:
+  html_document:
+    css: styles.css
+```
+
+If you wanted to go the extra mile and write your own theme in addition to highlight, the YAML header would look like: 
+```
+---
+output:
+  html_document:
+    theme: null
+    highlight: null
+    css: styles.css
+---
+```
+
+
+
+Here's a link to learn more about the [Appearance and Style](http://rmarkdown.rstudio.com/html_document_format.html#appearance_and_style) in HTML output.
+
+
+
+
+**************************************************************************************************
+
+
+# Caching  
+
+**Problem:**  Some code chunks take a __*long*__ time to run and may not be updated very often.  
+
+**Solution:**  Caching!  If a code chunk has not been modified since the last rendering of the document, the old results will be directly used instead of re-running the chunk.
+
+
+**Very simple solution:**  Exit knitting early -> if the rest of the document does not need to be rendered, simply put the `knit_exit()` and the rest of the document will be ignored.  Therefore, results from all previous text and code chunks will be returned.
+
+
+**lazy-loading** is when an object will not be loaded into memory until it is used.  A "promise" is instead created, which is computationally easy (to learn more run`?promise`).
+
+
+Therefore, when rendering the document, cached chunks are skipped and the output created previously from these chunks will be (lazy-) loaded from the `cache` folder.
+
+However, if a single change to the chunk occurs (even a white space counts!) then `knitr` will acknowledge this change and will actually run the chunk when the document is rendered.
+
+
+The user can also set the path for where the cached files should be by using `cache.path`  
+
+- **Default:**`cache.path = "file_name_cache/"`  
+    - For example:  Check out the  previously cached chunks in the `RMarkdown_Lesson_cache` directory.  
+
+
+
+
+Some issues with caching:  
+
+1. R is updated every few months.  `R.version.string`  
+2. External files that knitr does not track changes, may be updated and results will need to be re-run.  
+3. Sometimes a cached chunk might rely on objects from other cached chunk.  This can be a serious problem - so **<font color="red">be careful</font>**!  Therefore, we should cover chunk dependencies!  
+
+## Chunk Dependencies    
+
+### Manual  
+
+We can manually specify whether chunks depend on each other.  
+
+- `dependson` specifies which other chunks the current chunk relies on by setting a vector of chunk labels.  
+    - Examples with integers:  
+        - `depesndson = 1`: Chunk relies on first Chunk  
+        - `dependson = c(6,8)`:  Chunk relies on 6^th^ and 8^th^ chunks  
+        - `dependson = -1`:  Chunk relies on previous chunk.
+        - `dependson = c(-1, -2)`: Chunk relies on the two previous chunks.  
+        - **Note:**  When `dependson` takes on an integer value, it cannot make a chunk depend on *later* chunks - only *previous* chunks.  Therefore, it may be useful to use the chunk names or vectors of chunk names.  
+    - Examples with chunk names:  
+        - `dependson = c("Chunk-1", "Chunk-2", "Chunk-3")`  
+        - `dependson = c("data-generation", "data-transforamtion")`  
+- As a result, each time one of the cached chunks `"Chunk-1"`, `"Chunk-2"`, and `"Chunk-3"` are re-built, the current chunk will lose its cache and also be rebuilt!  
+
+### Automatic   
+
+Enter:  `autodep` chunk option and function `dep_auto()`  
+
+- `autodep` and `dep_auto()` state that if any objects in the current chunk are created in previous chunks, then the current chunk depends on a previous chunk.  
+
+For a more conservative approach, enter `dep_prev()`.
+
+- `dep_prev` states that a cached chunk will depend on all of its previous chunks.  Therefore, whenever previous chunks are updated, all the later chunks will also be updated.  
+
+
+Knitr only tracks changes with cached chunks, **not in uncached chunks!**  Fortunately, knitr will give a warning when it sees a dependency on an uncached chunk.  
+
+### Load Cache Manually  
+
+Suppose you calculated a value *z* in a chunk towards the end of the document, however, you would like to use *z* in an earlier chunk.  This is **impossible because knitr compiles the document in a linear fashion and it cannot use objects created in the future.**  
+
+Enter:  `load_cache`, which takes a chunk label to find the cache database
+
+```
+load_cache(label, object, notfound = "NOT AVAILABLE", 
+  path = opts_chunk$get("cache.path"), lazy = TRUE)
+```
+
+Therefore, if you use *z* in an inline R expression, it will output `NOT AVAILABLE` and since you have specified `notfound = "NOT AVAILALBE"` it will go back at the end and replace it with the value of *z*.  
+
+So cool! But, **<font color="red">Please use this function with caution</font>**.
+
+
+## Side Effects
+
+A **side effect** refers to a state change that occurs outside of a function that is not the returned value.  
+
+- `par()` and `options()` are side effects in the sense that they are not cached.  
+- Set all the global options in the first chunk and **never** cache that chunk.  
+
+We need to be careful with the chunk options to be sure that results from cached chunks are up-to-date.
+
+We can also turn off lazy-loading by setting the `cache.lazy = FALSE`. 
+
+
+# Bibliography  
+
+It's also possible to include a bibliography file in the YAML header.  Bibliography formats that are readable by Pandoc include the following:  
+
+| Format | 	File extension   |
+|-----+-------|
+| MODS  | 	.mods |
+| BibLaTeX  | .bib  |
+| BibTeX  | .bibtex  |
+| RIS  | .ris  |
+| EndNote  | .enl  |
+| EndNote XML  | .xml  |
+| ISI  | .wos  |
+| MEDLINE  | .medline  |
+| Copac  | 	.copac  |
+| JSON citeproc  | 	.json  |
+
+To create a bibliography in RMarkdown, two files are needed:  
+
+1. A bibliography file with the **information** about each reference.  
+2. A citation style language (CSL) to describe how to **format** the reference 
+
+An example YAML header with a bibliography and a citation style language (CSL) file:
+
+```
+output: html_document
+bibliography: bibliography.bib
+csl: nature.csl
+```
+
+Check out the very helpful webpage by the R Core team on [bibliographies and citations](http://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html).  
+
+If you would like to cite R packages, **knitr** even includes a function called `write_bib()` that creates a `.bib` entries for R packages.  It will even write it to a file!  
+
+```{r eval = FALSE}
+write_bib(file = "r-packages.bib") # will write all packages  
+write_bib(c("knitr", "ggplot2"), file = "r-packages2.bib") # Only writes knitr and ggplot2 packages
+```
+
+
+
+## Placement 
+
+Automatically the bibliography will be placed at the end of the document. Therefore, you should finish your `.Rmd` document with `# References` so the bibliography comes after the header for the bibliography.
+
+```
+final words...
+
+# References
+```
+
+
+## Citation Styles 
+
+**Citation Sylte Language (CSL)** is an XML-based language that identifies the format of citations and bibliographies. Reference management programs such as Zotero, Mendeley and Papers all use CSL.
+
+Search for your favorite journal and CSL in the [Zotero Style Repository](https://www.zotero.org/styles), which currently has 8,152 CSLs.  Is there a style that you're looking for that is not there?   
+
+```
+output: html_document
+bibliography: bibliography.bib
+csl: nature.csl
+```
+
+In this workshop I have included `nature.csl` to play around with.  Otherwise, download a citation from the Zotero Style Repository!
+
+
+## Citations  
+
+Citations go inside square brackets `[ ]`and are separated by semicolons `;`. Each citation must have a key, composed of `@ + the citation identifier` from the database, and may optionally have a prefix, a locator, and a suffix.  To check what the citation key is for a reference, take a look at the `.bib` file.  Here in this file, you can also change key for each reference.  However, be careful that each ID is unique!   
+
+
+Here are some examples with their code:
+
+-  Making beautiful plots with ggplot2 [@R-ggplot2]  
+    - Code: `Making beautiful plots with ggplot2 [@R-ggplot2]`  
+- Dr. Yuhui Xie's book about Dynamic Documents [@Xie2015] is a must-read.  
+    - Code:  `Dr. Yuhui Xie's book about Dynamic Documents [@Xie2015] is a must read.`
+
+The coolest thing is that the only references added to the document will be the ones that you have cited!  
+
+
+# Publishing on RPubs  
+
+Once you make a beautiful dynamic document you may wish to share it with others.  One option to share it with the world is to host it on [RPubs](https://rpubs.com/).  With RStudio, this makes is very easy!  Do the following:  
+
+1. Create your awesome `.Rmd` document.  
+2. Click the ![](Images/knit.png) button to render your HTML document to be published.  
+3. In the top right corner of the preview window, click the publish ![](Images/publish.png) button and follow the directions.  
+    - *Note:*  You will need to create an RPubs profile.  
+4. Once you have a profile you can choose the following:  
+    - The title of the document.  
+    - A description of the document.  
+    - The URL in which the website will be hosted.  
+        - *Note:*  The beginning of the URL will be:  **www.rpubs.com/your_username/name_of_your_choice**  
+        
+## Updating RPubs  
+
+If you make some changes to your document it is very easy to update the webpage.  Once you have rendered your edited document click the ![](Images/republish.png) button on the top right corner of the preview window.  The edited document will be in the same URL as the original document.  
+
+# Thank you  
+
+
+**Vijay Ivaturi**  
+**E-mail:** *vivaturi at rx dot umaryland dot edu*  
+**Twitter** `@vijay_ivaturi`  
+
+Good luck with your pursuit of dynamic documents!  
+
+# Session Info 
+```{r session-info, results ='markup'}
+devtools::session_info()
+```
+
+# References 
