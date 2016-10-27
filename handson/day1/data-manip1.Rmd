@@ -1,8 +1,10 @@
 ---
 title: "data manipulation hands-on"
 author: "YOUR_NAME_HERE"
-date: "`r Sys.Date()`"
-output: word_document
+date: '`r Sys.Date()`'
+output:
+  html_document: default
+  word_document: default
 ---
 
 ```{r}
@@ -24,6 +26,11 @@ Use the .csv files `demog`, `IV`, and `Oral` provided into the data object folde
 
 1. Read in all three csv files  and give them descriptive names (not data1, data2, data3)
 
+```{r, message = FALSE, warning=FALSE}
+iv_dat <- read_csv("../../data/IV.csv") %>% mutate(FORM = "IV")
+oral_dat <- read_csv("../../data/Oral.csv") %>% mutate(FORM = "Oral")
+demog <- read_csv("../../data/demog.csv") 
+```
 
 ## DATA MANIPULATION
 The goals of this section:
@@ -39,11 +46,49 @@ The goals of this section:
 
 4. Appropriately merge the demographics dataset into the IV and Oral dataset
 
+```{r}
+pk_dat <- bind_rows(iv_dat, oral_dat)
+all_dat <- left_join(pk_dat, demog)
+```
+
+
 5. Perform the following tasks:
     a. Ensure that the following columns are numeric and not text: TIME, COBS, WT, AGE, AMT and DOSEs
+    
+```{r}
+all_dat_cleaned <- all_dat %>% 
+  mutate(BQLFLAG = ifelse(is.na(DV), 0, 
+                          ifelse(DV == "BQL", 1, 0))) 
+
+```
+
+    
     b. Change the following:
     c. Create a new column called BQLFLAG which takes a value of "0" if there is a numerical value in CObs and "1" if there is "BQL" in CObs.
     d. Filter the dataset such that you remove all rows where BQLFLAG=1
+
+```{r}
+all_dat_no_bql <- all_dat_cleaned %>% 
+  filter(BQLFLAG != 1) %>%
+  mutate(WTlbs = WT*2.2,
+         GENDER = ifelse(SEX == "Female", 0, 1),
+         RACEN = ifelse(RACE == "Caucasian", 0,
+                        ifelse(RACE == "Asian", 1,
+                               ifelse(RACE == "Black", 2, 
+                                      ifelse(RACE == "Hispanic", 3, -99)))),
+         USUBJID = paste(ID, FORM, sep = ""))
+head(all_dat_no_bql)
+```
+
+```{r include = F}
+if (any(all_dat_no_bql$RACEN == -99)) {
+  stop("a non-handled race variable was detected")
+}
+```
+
+    
+    
+    
         i. WT from lb to kg 
     e. Create a new column called "GENDER" where:
         i. Female = 0
@@ -73,8 +118,29 @@ Objectives
 
 1. show a summary for all demographic columns
 
+```{r}
+demog_final <- all_dat_no_bql %>% 
+  distinct(ID, FORM, .keep_all = T)
+
+demog_final %>% 
+  select_if(SEX:RACE) %>% 
+  mutate(SEX = as.factor(SEX),
+          RACE= as.factor(RACE)) %>% 
+  summary
+```
+
 
 2. Count the number of males/females in the dataset
+
+```{r}
+demog_final %>% count(SEX, GENDER, FORM)
+
+demog_final %>% group_by(SEX, GENDER, FORM) %>% tally
+demog_final %>% 
+  group_by(SEX, GENDER, FORM) %>% 
+  summarize(n = n())
+```
+
 
 3. Count the number of subjects in each "Race" category
 
