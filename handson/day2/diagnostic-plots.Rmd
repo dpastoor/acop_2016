@@ -1,0 +1,104 @@
+---
+title: "diagnostic-plots"
+author: "YOUR_NAME_HERE"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+
+1) read in the csv datasets:
+
+* EtaCov_gathered
+* Residuals
+* Theta
+
+```{r libraries}
+library(PKPDmisc)
+library(knitr)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
+
+```{r readdata}
+# read all data in this chunk
+```
+
+2) From the Theta table, create a reasonable quality output table of the results.
+Hint, use knitr::kable, in combination with results='asis' in the chunk settings
+
+requires names:
+
+```{r}
+
+```
+
+
+* clean up columns
+* clean up column names
+* units
+
+3) Create a CWRES vs Time plot with loess fits for the central tendency and the spread (hint abs() is your friend for the spread)
+
+```{r}
+
+```
+
+4) update the CWRES vs Time plot to flag anything with CWRES > 2.5 as a red value
+```{r}
+
+```
+
+5) print a table of key information for all points with CWRES > 3
+
+```{r, results ='asis'}
+
+```
+
+
+6) Plot individual IPRED and DV vs time
+
+```{r}
+
+```
+
+
+6b) add the population prediction as a dashed blue line
+
+```{r}
+
+```
+
+7) With EtaCov_final create histograms of all the eta distributions
+
+```{r}
+
+```
+
+BONUS: add a mean value for each eta overlaid on the above plot
+```{r}
+
+```
+
+8) Create Eta vs Covariate plots for each covariate and all etas
+
+```{r}
+
+```
+
+
+Individual method:
+
+For small numbers of covariates, can create a plot for each
+```{r}
+
+```
+
+Hint: since there is so much duplicated, this would be a good opportunity to turn that into a function that you pass in the covariate to plot for `x`.
+
+9) add loess fits to the eta cov plots
+
+```{r}
+
+```
+

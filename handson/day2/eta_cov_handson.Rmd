@@ -1,0 +1,41 @@
+---
+title: "Eta vs Cov"
+author: "Vijay"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+
+```{r libraries}
+# required libraries
+library(PKPDmisc)
+library(tidyverse)
+```
+
+```{r readdata}
+##read ebe_cov.csv
+```
+
+```{r ebeplots_base_model_data}
+#stack etas and covariates to long form by ID
+# Separate by continuous and categorical covariates
+
+
+```
+  
+```{r ebe_cont_pk}
+#write a function to plot the continous covariates vs each ETA
+
+
+```
+
+
+
+```{r ebe_cat_pk}
+#write a function to plot the categorical covariates vs each ETA
+```
+
+
+```{r}
+devtools::session_info()
+```
